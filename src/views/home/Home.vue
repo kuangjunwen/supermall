@@ -2,6 +2,14 @@
   <div id="home">
     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
 
+    <tab-control
+      :titles="['流行', '新款', '精选']"
+      @tabClick="tabClick"
+      ref="tabControl"
+      class="tab-control"
+      v-show="false"
+    />
+
     <scroll
       class="content"
       ref="scroll"
@@ -10,13 +18,13 @@
       :pull-up-load="true"
       @pullingUp="loadMore"
     >
-      <home-swiper :banners="banners" />
+      <home-swiper :banners="banners" @swiperImageLoad="swiperImageLoad" />
       <recommend-view :recommends="recommends" />
       <featrue-view />
       <tab-control
-        class="tab-control"
         :titles="['流行', '新款', '精选']"
         @tabClick="tabClick"
+        ref="tabControl"
       />
       <goods-list :goods="showGoods" />
     </scroll>
@@ -27,6 +35,7 @@
 <script>
 // 导入一些方法
 import { getHomeMultidata, getHomeGoods } from "network/home";
+import { debounce } from "common/utils";
 
 // 导入子组件
 import HomeSwiper from "./childComps/HomeSwiper.vue";
@@ -53,12 +62,22 @@ export default {
       },
       currentType: "pop",
       isShowBackTop: false,
+      tabOffsetTop: 0,
+      isTabFixed: false,
+      saveY: 0,
     };
   },
   computed: {
     showGoods() {
       return this.goods[this.currentType].list;
     },
+  },
+  activated() {
+    this.$refs.scroll.refresh();
+    this.$refs.scroll.scrollTo(0, this.saveY, 10);
+  },
+  deactivated() {
+    this.saveY = this.$refs.scroll.getScrollY();
   },
   components: {
     NavBar,
@@ -78,6 +97,16 @@ export default {
     this.getHomeGoods("pop");
     this.getHomeGoods("new");
     this.getHomeGoods("sell");
+  },
+  mounted() {
+    const refresh = debounce(this.$refs.scroll.refresh, 200);
+    // 1.监听item中图片加载完成
+    this.$bus.$on("itemImageLoad", () => {
+      refresh();
+    });
+
+    // 2.获取tabControl的offsetTop
+    // 所有组件都有一个属性$el: 用于获取组件中的元素
   },
   methods: {
     // 事件监听相关的方法
@@ -102,10 +131,16 @@ export default {
     contentScroll(position) {
       // 因为y轴是负值，所以要先变成正数才能进行判断
       // 显示隐藏回到顶部组件
+      // 1.判断BackTop是否显示
       this.isShowBackTop = -position.y > 1000;
+      // 2.决定tabControl是否吸顶(position: fixed)
+      this.isTabFixed = -position.y > this.tabOffsetTop;
     },
     loadMore() {
       this.getHomeGoods(this.currentType);
+    },
+    swiperImageLoad() {
+      this.tabOffsetTop = this.$refs.tabControl.$el.offsetTop;
     },
     // 网络请求相关的方法
     getHomeMultidata() {
@@ -152,14 +187,22 @@ export default {
 img {
   width: 100%;
 }
-.tab-control {
-  position: sticky;
-  top: 44px;
-  z-index: 8;
-}
 .content {
-  height: calc(100% - 93px);
-  overflow: hidden;
-  margin-top: 44px;
+  position: absolute;
+  top: 44px;
+  bottom: 49px;
+  left: 0;
+  right: 0;
+}
+.tab-control {
+  position: relative;
+
+  z-index: 9;
+}
+.fixed {
+  position: fixed;
+  top: 44px;
+  left: 0;
+  right: 0;
 }
 </style>

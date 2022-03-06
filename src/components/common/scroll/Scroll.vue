@@ -35,23 +35,36 @@ export default {
     });
 
     // 2.监听滚动的位置
-    this.scroll.on("scroll", (position) => {
-      this.$emit("scroll", position);
-    });
+    if (this.probeType === 2 || this.probeType === 3) {
+      this.scroll.on("scroll", (position) => {
+        this.$emit("scroll", position);
+      });
+    }
 
-    // 3.监听上拉加载事件
-    this.scroll.on("pullingUp", () => {
-      this.$emit("pullingUp");
-    });
+    // 3.监听scroll滚动到底部
+    if (this.pullUpLoad) {
+      this.scroll.on("pullingUp", () => {
+        this.$emit("pullingUp");
+      });
+    }
   },
   methods: {
     // 返回顶部
     scrollTo(x, y, time = 300) {
-      this.scroll.scrollTo(x, y, time);
+      this.scroll && this.scroll.scrollTo(x, y, time);
     },
     // 完成加载更多
     finishPullUp() {
-      this.scroll.finishPullUp();
+      this.scroll && this.scroll.finishPullUp();
+    },
+    // 刷新
+    refresh() {
+      this.scroll && this.scroll.refresh();
+    },
+    getScrollY() {
+      // 获取坐标y值
+      // return this.scroll ? this.scroll.y : 0;
+      return this.scroll.y;
     },
   },
   components: {},
